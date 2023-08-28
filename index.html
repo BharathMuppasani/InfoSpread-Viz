@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Visualization</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div id="attributes">
+        <h2>InfoSpread</h2>
+
+        <div>
+            <label for="agentInput">Number of Agents:</label>
+            <input type="number" id="agentInput" min="1" value="4">
+        </div>
+
+        <div>
+            <label for="connectionType">Connection Type:</label>
+            <select id="connectionType">
+                <option value="fullyConnected">Fully Connected</option>
+                <option value="random">Random Network</option>
+                <option value="smallWorld">Small World Network</option>
+                <option value="erdosRenyi">Erdos-Reyni Network</option>
+                <option value="scaleFree">Scale-free Network</option>
+            </select>
+        </div>
+
+        <div>
+            <button id="updateButton">Update Visualization</button>
+        </div>
+
+        <select id="modelType">
+            <option value="basicOpinion">Basic Opinion Propagation</option>
+            <option value="voterModel">Voter Model</option>
+            <!-- Additional models can be added here -->
+        </select>
+
+        <label for="iterations">Number of Iterations:</label>
+        <input type="number" id="iterations" name="iterations" min="1" value="10">
+        <!-- Button to run the simulation -->
+        <button id="runSimulation">Run Simulation</button>
+        
+        
+    </div>
+    
+    <!-- Wrapping network visualization and its related components in a single div -->
+    <div id="networkContainer">
+        <svg id="network"></svg>
+        <div id="iterationCount"></div>
+        <div id="agentDetails">
+            <h3>Agent Details</h3>
+            <p><strong>ID:</strong> <span id="nodeId"></span></p>
+            <p><strong>Opinion:</strong> <span id="nodeOpinion"></span></p>
+            <!-- Additional attributes can be added here as they become available -->
+        </div>         
+
+        <div id="colorScaleContainer">
+            <div id="colorScale">
+                <div id="gradient"></div>
+            </div>
+            <div id="legend">
+                <span class="tick" style="top: 0%;">1</span>
+                <span class="tick" style="top: 50%;">0</span>
+                <span class="tick" style="top: 100%;">-1</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/d3.min.js"></script>
+    <script src="static/js/script.js"></script>
+</body>
+</html>
