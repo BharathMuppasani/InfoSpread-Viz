@@ -23,6 +23,8 @@ let totalIterations = 0;
 let previouslySelectedNode = null;
 let selectedNode = null;
 
+const symbolGenerator = d3.symbol();
+
 // Set up SVG canvas dimensions
 const width = 800;
 const height = 600;
@@ -51,12 +53,109 @@ d3.select("#network").on("click", function(event, d) {
     if (event.target.tagName === "svg" || event.target.tagName === "SVG") {
         document.getElementById("agentDetails").style.display = 'none'; // Hide the agent details div
         if (previouslySelectedNode) {
-            d3.select(previouslySelectedNode).attr("r", 5).attr("filter", null);
+            const nodeData = d3.select(previouslySelectedNode).data()[0];
+            if (nodeData.type === 'Source') {
+                d3.select(previouslySelectedNode)
+                  .attr("d", symbolGenerator.type(d3.symbolTriangle).size(200)());
+            } else {
+                d3.select(previouslySelectedNode)
+                  .attr("d", symbolGenerator.type(d3.symbolCircle).size(100)());
+            }
+            d3.select(previouslySelectedNode).attr("filter", null); // Remove the glow effect
             previouslySelectedNode = null;
             selectedNode = null;
         }
     }
 });
+
+
+// Get the modal
+var modal = document.getElementById("matrixModal");
+
+// Get the button that opens the modal
+var btn = document.getElementById("openMatrixModal");
+
+// Get the <span> element that closes the modal
+var span = document.getElementsByClassName("close")[0];
+
+
+let matrixValues = {};
+
+// When the user clicks the button, open the modal 
+btn.onclick = function() {
+    modal.style.display = "block";
+    populateMatrix();
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+    modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+
+function populateMatrix() {
+    const numTopics = parseInt(document.getElementById("numTopics").value);
+    const table = document.getElementById("dependencyMatrix");
+    table.innerHTML = "";  // Clear the table
+
+    // Create table header for column labels
+    let headerRow = table.insertRow();
+    headerRow.insertCell().innerHTML = "";  // Empty cell for top-left corner
+    for (let i = 1; i <= numTopics; i++) {
+        let headerCell = headerRow.insertCell();
+        headerCell.innerHTML = "Topic-" + i;
+        headerCell.style.fontWeight = "bold";
+        headerCell.style.textAlign = "center";
+        headerCell.style.fontSize = "12px"; // Reduced font size
+        headerCell.style.padding = "4px";   // Reduced padding
+    }
+
+    for (let i = 1; i <= numTopics; i++) {
+        let row = table.insertRow();
+
+        // Add row labels
+        let rowLabel = row.insertCell();
+        rowLabel.innerHTML = "Topic-" + i;
+        rowLabel.style.fontWeight = "bold";
+        rowLabel.style.textAlign = "center";
+        rowLabel.style.fontSize = "12px"; // Reduced font size
+        rowLabel.style.padding = "4px 10px";   // Reduced padding
+
+        for (let j = 1; j <= numTopics; j++) {
+            let cell = row.insertCell();
+            let input = document.createElement("input");
+            input.type = "number";
+            input.step = 0.1;
+            input.min = -1;
+            input.max = 1;
+            input.value = (matrixValues[i] && matrixValues[i][j]) || 0;
+            cell.appendChild(input);
+        }
+    }
+}
+
+
+document.getElementById("submitMatrix").addEventListener("click", function() {
+    const table = document.getElementById("dependencyMatrix");
+    for (let i = 1; i < table.rows.length; i++) {  // Start from 1 to skip the header row
+        const row = table.rows[i];
+        if (!matrixValues[i]) {
+            matrixValues[i] = {};
+        }
+        for (let j = 1; j < row.cells.length; j++) {  // Start from 1 to skip the label cell
+            const input = row.cells[j].querySelector("input");
+            matrixValues[i][j] = parseFloat(input.value);
+        }
+    }
+    modal.style.display = "none";
+});
+
 
 // Define a filter for the glow effect
 svg.append("filter")
@@ -64,61 +163,6 @@ svg.append("filter")
     .append("feGaussianBlur")
     .attr("stdDeviation", 2.5)
     .attr("result", "coloredBlur");
-
-// Draw links
-let link = svg.append("g")
-    .selectAll("line")
-    .data(links)
-    .enter().append("line")
-    .attr("stroke", "#999")
-    .attr("stroke-opacity", 0.9);
-
-// Draw nodes, attach click event, and add drag functionality
-let node = svg.append("g")
-    .selectAll("circle")
-    .data(nodes)
-    .enter().append("circle")
-    .attr("r", 5)
-    .attr("fill", d => colorScale(d.opinion))
-    .attr("stroke-width", 1)  // Initial stroke width for all nodes
-    .on('click', function(event, d) {
-        event.stopPropagation();
-        // Reset the stroke of all nodes
-        node.attr("stroke", null).attr("stroke-width", 1);
-        
-        // Deselect the previously selected node
-        if (previouslySelectedNode) {
-            d3.select(previouslySelectedNode).attr("r", 5).attr("filter", null);
-        }
-
-        // Highlight the clicked node
-        d3.select(this).attr("r", 8).attr("filter", "url(#glow)");  // Increase the size and apply the glow effect
-        previouslySelectedNode = this;
-        selectedNode = d;
-
-        console.log('Node clicked:', d.id);
-        document.getElementById("nodeId").textContent = d.id;
-        document.getElementById("nodeOpinion").textContent = d.opinion.toFixed(2);  // Display opinion up to 2 decimal places
-        document.getElementById("agentDetails").style.display = 'block'; // Display the agent details div
-    })
-    .call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended));
-
-
-// Update positions based on simulation
-simulation.on("tick", () => {
-    link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
-
-    node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
-});
 
 
 // Drag functions
@@ -139,8 +183,25 @@ function dragended(event, d) {
     d.fy = null;
 }
 
-function updateVisualization(numAgents) {
+function updateVisualization(numAgents, numSourceNodes) {
     const connectionType = document.getElementById("connectionType").value;
+    const numTopics = parseInt(document.getElementById("numTopics").value);
+    const selectedTopic = parseInt(document.getElementById("selectedTopic").value);
+
+    const topicSelect = document.getElementById("selectedTopic");
+
+    // Populate the visualization topic selector
+    populateVisualizationTopicSelector(numTopics);
+
+    while (topicSelect.firstChild) {
+        topicSelect.removeChild(topicSelect.firstChild);  // Clear previous options
+    }
+    for (let i = 0; i < numTopics; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.text = "Topic-" + (i + 1);
+        topicSelect.appendChild(option);
+    }
 
     totalIterations = 0;
     updateIterationCount(totalIterations);
@@ -153,7 +214,10 @@ function updateVisualization(numAgents) {
         },
         body: JSON.stringify({
             numAgents: numAgents,
-            connectionType: connectionType
+            numSourceNodes: numSourceNodes,
+            connectionType: connectionType,
+            numTopics: numTopics,
+            selectedTopic: selectedTopic
         })
     })
     .then(response => response.json())
@@ -177,33 +241,61 @@ function updateVisualization(numAgents) {
             .attr("stroke-opacity", 0.9);
 
         // Re-draw nodes and attach click and drag events
+        // Define a symbol generator
+
+        // Re-draw nodes and attach click and drag events
         let node = svg.append("g")
-            .selectAll("circle")
+            .selectAll(".node")
             .data(nodes)
-            .enter().append("circle")
-            .attr("r", 5)
-            .attr("fill", d => colorScale(d.opinion))
+            .enter().append("path")
+            .attr("class", "node")
+            .attr("d", function(d) {
+                // Set initial size based on type
+                if (d.type === 'Source') {
+                    return symbolGenerator.type(d3.symbolTriangle).size(200)();
+                } else {
+                    return symbolGenerator.type(d3.symbolCircle).size(100)();
+                }
+            })
+            .attr("fill", function(d) {
+                const selectedTopicIndex = document.getElementById("selectedTopic").value;
+                const opinionKey = `opinion_${selectedTopicIndex}`;
+                return colorScale(d[opinionKey]);
+            })
             .attr("stroke-width", 1)  // Initial stroke width for all nodes
             .on('click', function(event, d) {
                 event.stopPropagation();
-                // Reset the stroke of all nodes
-                node.attr("stroke", null).attr("stroke-width", 1);
                 
+                // Reset the size of all nodes to default based on type
+                node.attr("d", d => {
+                    if (d.type === 'Source') {
+                        return symbolGenerator.type(d3.symbolTriangle).size(200)();
+                    } else {
+                        return symbolGenerator.type(d3.symbolCircle).size(100)();
+                    }
+                }).attr("filter", null);  // Remove glow effect
+            
                 // Deselect the previously selected node
                 if (previouslySelectedNode) {
-                    d3.select(previouslySelectedNode).attr("r", 5).attr("filter", null);
+                    d3.select(previouslySelectedNode).attr("filter", null); // Remove glow effect from previously selected node
                 }
-
-                // Highlight the clicked node
-                d3.select(this).attr("r", 8).attr("filter", "url(#glow)");  // Increase the size and apply the glow effect
+            
+                // Highlight the clicked node by increasing its size based on type
+                d3.select(this).attr("d", d => {
+                    if (d.type === 'Source') {
+                        return symbolGenerator.type(d3.symbolTriangle).size(300)();
+                    } else {
+                        return symbolGenerator.type(d3.symbolCircle).size(200)();
+                    }
+                }).attr("filter", "url(#glow)");
+            
                 previouslySelectedNode = this;
                 selectedNode = d;
-                
+            
                 console.log('Node clicked:', d.id);
-                document.getElementById("nodeId").textContent = d.id;
-                document.getElementById("nodeOpinion").textContent = d.opinion.toFixed(2);  // Display opinion up to 2 decimal places
-                document.getElementById("agentDetails").style.display = 'block'; // Display the agent details div
+                updateAgentDetails(d);
             })
+            .attr("transform", d => `translate(${d.x}, ${d.y})`)
             .call(d3.drag()
                 .on("start", dragstarted)
                 .on("drag", dragged)
@@ -216,11 +308,11 @@ function updateVisualization(numAgents) {
                 .attr("y1", d => d.source.y)
                 .attr("x2", d => d.target.x)
                 .attr("y2", d => d.target.y);
-
+        
             node
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
+                .attr("transform", d => `translate(${d.x}, ${d.y})`);
         });
+        
 
         // Restart the simulation
         simulation.alpha(1).restart();
@@ -235,7 +327,15 @@ function updateVisualization(numAgents) {
 function updateAgentDetails(d) {
     // Update the agent details div
     document.getElementById("nodeId").textContent = d.id;
-    document.getElementById("nodeOpinion").textContent = d.opinion.toFixed(2);
+    document.getElementById("nodeType").textContent = d.type;
+    
+    const selectedTopicIndex = document.getElementById("visualizationTopicSelector").value;
+    const opinionKey = `opinion_${selectedTopicIndex}`;
+    const topicLabel = `Topic-${parseInt(selectedTopicIndex) + 1} Opinion`;
+
+    document.getElementById("nodeOpinionLabel").textContent = topicLabel;
+    document.getElementById("nodeOpinion").textContent = d[opinionKey].toFixed(2);
+    
     document.getElementById("agentDetails").style.display = 'block';
 }
 
@@ -249,6 +349,11 @@ document.getElementById("runSimulation").addEventListener("click", function() {
     let numberOfIterations = parseInt(document.getElementById("iterations").value);
     totalIterations += numberOfIterations;
 
+    const selectedTopic = document.getElementById("selectedTopic").value;
+
+    // Set the visualizationTopicSelector to the selected topic from the simulation dropdown
+    document.getElementById("visualizationTopicSelector").value = selectedTopic;
+
     fetch("http://localhost:5002/update_opinions", {
         method: 'POST',
         headers: {
@@ -258,20 +363,22 @@ document.getElementById("runSimulation").addEventListener("click", function() {
             nodes: nodes,
             links: links,
             modelType: modelType,
-            iterations: numberOfIterations
+            iterations: numberOfIterations,
+            selectedTopic: selectedTopic,
+            dependencyMatrix: matrixValues
         })
     })
     .then(response => response.json())
     .then(data => {
         // Update the nodes with the received data
+        const opinionKey = `opinion_${selectedTopic}`;
         for (let i = 0; i < nodes.length; i++) {
-            nodes[i].opinion = data.nodes[i].opinion;
+            nodes[i][opinionKey] = data.nodes[i][opinionKey];
         }
     
         // Trigger the D3 visualization to update
         refreshVisualization();
         updateIterationCount(totalIterations);
-        console.log('Selected node:', selectedNode);
         if (selectedNode) {
             let updatedNodeData = selectedNode; // Assumes nodesData is the array with your updated nodes
             if (updatedNodeData) {
@@ -285,22 +392,56 @@ document.getElementById("runSimulation").addEventListener("click", function() {
 });
 
 function refreshVisualization() {
-    // Assuming you're using circles to represent nodes and you've bound the nodes array to these circles
-    d3.selectAll("circle")
-      .attr("fill", d => colorScale(d.opinion)) // Replace colorScale with your logic to color nodes based on opinion
-      // ... any other updates based on the opinion value ...
+    const selectedTopicIndex = document.getElementById("visualizationTopicSelector").value;
+    const opinionKey = `opinion_${selectedTopicIndex}`;
 
+    // Duration for the transition (in milliseconds)
+    const transitionDuration = 500;  // example: 1 second
+    
+    // Select all nodes (both circles and triangles) and smoothly transition their fill based on the selected topic's opinion value
+    d3.selectAll(".node")
+      .transition()  // Start a transition
+      .duration(transitionDuration)  // Define the duration of the transition
+      .attr("fill", d => colorScale(d[opinionKey])); 
+    
     // If needed, update the links or any other visualization elements as well
+    // ...
 }
 
 function updateIterationCount(count) {
     document.getElementById("iterationCount").innerText = `Iterations: ${count}`;
 }
 
+function populateVisualizationTopicSelector(numTopics) {
+    const topicSelector = document.getElementById("visualizationTopicSelector");
+    
+    // Clear previous options
+    while (topicSelector.firstChild) {
+        topicSelector.removeChild(topicSelector.firstChild);
+    }
+    
+    for (let i = 0; i < numTopics; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.text = "Topic-" + (i + 1);
+        topicSelector.appendChild(option);
+    }
+}
+
+document.getElementById("visualizationTopicSelector").addEventListener("change", function() {
+    refreshVisualization();
+    if (selectedNode !== null) {
+        updateAgentDetails(selectedNode);
+    }
+});
+
+
 document.getElementById("updateButton").addEventListener("click", function() {
     const numAgents = parseInt(document.getElementById("agentInput").value);
-    updateVisualization(numAgents);
+    const numSourceNodes = parseInt(document.getElementById("sourceInput").value);
+
+    updateVisualization(numAgents, numSourceNodes);
 });
 
 // Initial draw
-updateVisualization(nodes.length);
+updateVisualization(nodes.length, 1);

@@ -16,6 +16,25 @@
         </div>
 
         <div>
+            <label for="sourceInput">Number of Source Nodes:</label>
+            <input type="number" id="sourceInput" min="0" value="1">
+        </div>
+
+        <div>
+            <label for="numTopics">Number of Topics:</label>
+            <input type="number" id="numTopics" name="numTopics" min="1" value="1">
+        </div>
+        <button id="openMatrixModal">Open Dependency Matrix</button>
+        <div id="matrixModal" class="modal">
+            <div class="modal-content">
+                <h2>Topic Dependency Matrix</h2>
+                <span class="close">&times;</span>
+                <table id="dependencyMatrix"></table>
+                <button id="submitMatrix">Submit</button>
+            </div>
+        </div>
+
+        <div>
             <label for="connectionType">Connection Type:</label>
             <select id="connectionType">
                 <option value="fullyConnected">Fully Connected</option>
@@ -33,8 +52,15 @@
         <select id="modelType">
             <option value="basicOpinion">Basic Opinion Propagation</option>
             <option value="voterModel">Voter Model</option>
+            <option value="hegselmannKrause">Hegselmann-Krause Model</option>
             <!-- Additional models can be added here -->
         </select>
+        
+        <label for="selectedTopic">Select Topic for Simulation:</label>
+        <select id="selectedTopic">
+        <!-- The options for this dropdown will be dynamically populated based on numTopics -->
+        </select>
+
 
         <label for="iterations">Number of Iterations:</label>
         <input type="number" id="iterations" name="iterations" min="1" value="10">
@@ -47,13 +73,19 @@
     <!-- Wrapping network visualization and its related components in a single div -->
     <div id="networkContainer">
         <svg id="network"></svg>
-        <div id="iterationCount"></div>
+        <div id="controlPanel">
+            <span id="iterationCount">Iterations: 0</span>
+            <select id="visualizationTopicSelector">
+                <!-- Options will be dynamically added by JavaScript -->
+            </select>
+        </div>
         <div id="agentDetails">
             <h3>Agent Details</h3>
             <p><strong>ID:</strong> <span id="nodeId"></span></p>
-            <p><strong>Opinion:</strong> <span id="nodeOpinion"></span></p>
+            <p><strong>Type:</strong> <span id="nodeType"></span></p>
+            <p><strong id="nodeOpinionLabel">Opinion:</strong> <span id="nodeOpinion"></span></p>
             <!-- Additional attributes can be added here as they become available -->
-        </div>         
+        </div>             
 
         <div id="colorScaleContainer">
             <div id="colorScale">
