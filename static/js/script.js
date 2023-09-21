@@ -23,6 +23,13 @@ let totalIterations = 0;
 let previouslySelectedNode = null;
 let selectedNode = null;
 
+
+let goalNodeData = {
+    nodeId: null,
+    selectedTopic: null,
+    targetOpinion: null
+};
+
 const symbolGenerator = d3.symbol();
 
 // Set up SVG canvas dimensions
@@ -52,6 +59,7 @@ svg.call(zoomBehavior);
 d3.select("#network").on("click", function(event, d) {
     if (event.target.tagName === "svg" || event.target.tagName === "SVG") {
         document.getElementById("agentDetails").style.display = 'none'; // Hide the agent details div
+        document.getElementById("planDetails").style.display = "none";  // Hide the plan details div
         if (previouslySelectedNode) {
             const nodeData = d3.select(previouslySelectedNode).data()[0];
             if (nodeData.type === 'Source') {
@@ -67,6 +75,78 @@ d3.select("#network").on("click", function(event, d) {
         }
     }
 });
+
+// Event listener for the "Set as Goal Node" checkbox
+document.getElementById("goalNodeCheckbox").addEventListener("change", function() {
+    const targetOpinionDiv = document.getElementById("targetOpinionDiv");
+    const generatePlanButton = document.getElementById("generatePlanButton");
+    if (this.checked) {
+        targetOpinionDiv.style.display = 'block';
+        generatePlanButton.style.display = 'block';  // Show the button
+        if (selectedNode) {
+            selectedNode.isGoalNode = true;
+        }
+    } else {
+        targetOpinionDiv.style.display = 'none';
+        generatePlanButton.style.display = 'none';  // Hide the button
+        if (selectedNode) {
+            selectedNode.isGoalNode = false;
+            selectedNode.targetOpinion = null;
+        }
+    }
+});
+
+// Event listener for the target opinion input field
+document.getElementById("targetOpinion").addEventListener("change", function() {
+    if (selectedNode !== null) {
+        goalNodeData.nodeId = selectedNode.id;
+        goalNodeData.selectedTopic = document.getElementById("visualizationTopicSelector").value;
+        goalNodeData.targetOpinion = this.value;
+    }
+});
+
+document.getElementById("generatePlanButton").addEventListener("click", function() {
+    // Extract the required data
+    const requestData = {
+        nodes: nodes,  // Assuming 'nodes' contains the current node data
+        links: links,  // Assuming 'links' contains the current link data
+        goalNodeData: goalNodeData
+    };
+
+    // Send the request to the backend
+    fetch("http://localhost:5002/generate_plan", {  // Assuming "/generate_plan" is your backend endpoint
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Handle the data returned from the backend
+        console.log("Received plan:", data);
+        
+        // Populate the plan details
+        const planStepsList = document.getElementById("planStepsList");
+        
+        // Clear any existing steps
+        planStepsList.innerHTML = "";
+
+        // Assuming data is an array of plan steps
+        data.forEach(step => {
+            const listItem = document.createElement("li");
+            listItem.textContent = step;
+            planStepsList.appendChild(listItem);
+        });
+
+        // Display the plan details div
+        document.getElementById("planDetails").style.display = "block";
+    })
+    .catch(error => {
+        console.error("Error generating plan:", error);
+    });
+});
+
 
 
 // Get the modal
@@ -192,6 +272,22 @@ function updateVisualization(numAgents, numSourceNodes) {
 
     // Populate the visualization topic selector
     populateVisualizationTopicSelector(numTopics);
+
+    document.getElementById("agentDetails").style.display = 'none';
+
+    goalNodeData = {
+        nodeId: null,
+        selectedTopic: null,
+        targetOpinion: null
+    };
+
+    const goalNodeCheckbox = document.getElementById("goalNodeCheckbox");
+    const targetOpinionInput = document.getElementById("targetOpinion");
+
+    goalNodeCheckbox.checked = false;
+    targetOpinionInput.value = "";
+    document.getElementById("targetOpinionDiv").style.display = 'none';
+    document.getElementById("planDetails").style.display = 'none';
 
     while (topicSelect.firstChild) {
         topicSelect.removeChild(topicSelect.firstChild);  // Clear previous options
@@ -336,8 +432,28 @@ function updateAgentDetails(d) {
     document.getElementById("nodeOpinionLabel").textContent = topicLabel;
     document.getElementById("nodeOpinion").textContent = d[opinionKey].toFixed(2);
     
+    const goalNodeCheckbox = document.getElementById("goalNodeCheckbox");
+    const targetOpinionInput = document.getElementById("targetOpinion");
+    const generatePlanButton = document.getElementById("generatePlanButton");
+
+    // Check if the current node and topic matches the stored goal node data
+    if (goalNodeData.nodeId === d.id && goalNodeData.selectedTopic === selectedTopicIndex) {
+        goalNodeCheckbox.checked = true;
+        targetOpinionInput.value = goalNodeData.targetOpinion;
+        generatePlanButton.style.display = 'block';
+        document.getElementById("targetOpinionDiv").style.display = 'block';
+        document.getElementById("planDetails").style.display = 'block';
+    } else {
+        goalNodeCheckbox.checked = false;
+        targetOpinionInput.value = "";
+        generatePlanButton.style.display = 'none';
+        document.getElementById("targetOpinionDiv").style.display = 'none';
+        document.getElementById("planDetails").style.display = 'none';
+    }
+
     document.getElementById("agentDetails").style.display = 'block';
 }
+
 
 // ############################ Code for running simulation ############################
 
@@ -345,7 +461,8 @@ let numberOfIterations = document.getElementById("iterations").value;
 
 document.getElementById("runSimulation").addEventListener("click", function() {
     const modelType = document.getElementById("modelType").value;
- 
+    const numTopics = parseInt(document.getElementById("numTopics").value);
+
     let numberOfIterations = parseInt(document.getElementById("iterations").value);
     totalIterations += numberOfIterations;
 
@@ -365,6 +482,7 @@ document.getElementById("runSimulation").addEventListener("click", function() {
             modelType: modelType,
             iterations: numberOfIterations,
             selectedTopic: selectedTopic,
+            numTopics: numTopics,
             dependencyMatrix: matrixValues
         })
     })
@@ -391,12 +509,76 @@ document.getElementById("runSimulation").addEventListener("click", function() {
     })
 });
 
+
+// ############################ Code for plan execution ############################
+document.getElementById("executePlanButton").addEventListener("click", async function() {
+    const planStepsElements = Array.from(document.getElementById("planStepsList").children);
+    const planSteps = planStepsElements.map(li => li.textContent);
+    const modelType = "custom";
+
+    for (let i = 0; i < planSteps.length; i++) {
+        let step = planSteps[i];
+
+        // Highlight the current step
+        planStepsElements[i].classList.add('currentStep');
+
+        let topicMatch = step.match(/TOPIC(\d+)/);
+        let topicNumber = topicMatch ? parseInt(topicMatch[1]) : null;
+
+        if(topicNumber === null) {
+            console.error("Error extracting topic number from step:", step);
+            continue;  // Skip this iteration
+        }
+
+        await fetch("http://localhost:5002/execute_plan", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nodes: nodes,
+                links: links,
+                modelType: modelType,
+                currentStep: step,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const opinionKey = `opinion_${topicNumber-1}`;
+            
+            for (let j = 0; j < nodes.length; j++) {
+                nodes[j][opinionKey] = data.nodes[j][opinionKey];
+            }
+
+            refreshVisualization();
+            if (selectedNode) {
+                let updatedNodeData = selectedNode;
+                if (updatedNodeData) {
+                    updateAgentDetails(updatedNodeData);
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Error updating opinions:", error);
+        });
+
+        await delay(1000);  // Introduce a 1-second delay before executing the next step
+
+        // Mark the step as executed and remove the 'current' highlighting
+        planStepsElements[i].classList.remove('currentStep');
+        planStepsElements[i].classList.add('executedStep');
+    }
+});
+
+
+
+
 function refreshVisualization() {
     const selectedTopicIndex = document.getElementById("visualizationTopicSelector").value;
     const opinionKey = `opinion_${selectedTopicIndex}`;
 
     // Duration for the transition (in milliseconds)
-    const transitionDuration = 500;  // example: 1 second
+    const transitionDuration = 500; 
     
     // Select all nodes (both circles and triangles) and smoothly transition their fill based on the selected topic's opinion value
     d3.selectAll(".node")
@@ -407,6 +589,8 @@ function refreshVisualization() {
     // If needed, update the links or any other visualization elements as well
     // ...
 }
+
+
 
 function updateIterationCount(count) {
     document.getElementById("iterationCount").innerText = `Iterations: ${count}`;
@@ -427,6 +611,11 @@ function populateVisualizationTopicSelector(numTopics) {
         topicSelector.appendChild(option);
     }
 }
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 document.getElementById("visualizationTopicSelector").addEventListener("change", function() {
     refreshVisualization();

@@ -86,6 +86,25 @@ body {
     font-weight: bold;
 } */
 
+#nodeTypeLegend {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 15px;  /* Adjust the gap between the legend items */
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legendItem svg {
+    margin-right: 5px;
+}
+
+
 #controlPanel {
     position: absolute;
     top: 10px;
@@ -129,59 +148,144 @@ body {
     font-size: 14px;
 }
 
+#agentDetails hr {
+    border: 0;  /* Removes default border */
+    height: 1px;  /* Adjust this for overall thickness */
+    background: linear-gradient(to right, transparent, #aaa, transparent);
+    margin: 10px 0;  /* Provides some spacing above and below the line */
+}
+
+
 #agentDetails:hover {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);  /* slight upward movement on hover */
 }
 
 
+#planDetails {
+    position: absolute;
+    margin-top: 150px; /* Place it just below the agentDetails box */
+    right: 10px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px; /* Rounded corners for consistency */
+    max-height: 250px; /* Set a max height */
+    overflow-y: auto; /* Enable scrolling if content exceeds max height */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Consistent shadow with agentDetails */
+    z-index: 2; /* Ensure it's above other elements if needed */
+    display: none; /* Initially hidden */
+}
+
+#planDetails hr {
+    border: 0;  /* Removes default border */
+    height: 1px;  /* Adjust this for overall thickness */
+    background: linear-gradient(to right, transparent, #aaa, transparent);
+    margin: 10px 0;  /* Provides some spacing above and below the line */
+}
+
+.planHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#planDetails .planHeader span {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: left; /* Align the header to the left */
+}
+
+#executePlanButton {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    transition: background-color 0.3s;
+}
+
+#executePlanButton:hover {
+    background-color: #f98c8c;
+}
+
+#planStepsList {
+    list-style-type: none; /* Remove bullet points */
+    padding: 0; /* Remove default padding */
+    margin: 0; /* Remove default margin */
+}
+
+#planStepsList li {
+    padding: 5px 0; /* Spacing between steps */
+    font-size: 12px;
+    border-bottom: 1px solid #eee; /* Separator line between steps */
+}
+
+#planStepsList li:last-child {
+    border-bottom: none; /* Remove bottom border for the last step */
+}
+
+.currentStep {
+    font-weight: bold;
+    color: red;  /* Use the red accent color you mentioned */
+}
+
+.executedStep {
+    color: red;
+}
+
+
+#generatePlanButton {
+    display: block;
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: #fd7070; /* Consistent with the color observed for headers */
+    border: 1px solid #e0e0e0; /* Border color consistent with other elements */
+    color: white;
+    font-size: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    cursor: pointer;
+    border-radius: 4px; /* Slight rounded corners */
+    transition: background-color 0.3s;
+}
+
+#generatePlanButton:hover {
+    background-color: #b80202; /* Slightly darker shade on hover */
+}
+
+
 #colorScaleContainer {
     position: absolute;
     bottom: 20px;
-    right: 40px;
+    right: 10px;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;  /* Stack children vertically */
+    align-items: flex-start;  /* Align children to the start */
 }
 
 #colorScale {
-    width: 10px;  /* Thin color scale */
-    height: 200px;
-    margin-right: 5px;  /* Space between scale and legend */
+    height: 10px;  
+    width: 200px;  
+    margin-bottom: 5px;  /* Space between scale and legend */
 }
 
 #gradient {
     width: 100%;
     height: 100%;
-    background: linear-gradient(to top, red, blue);
+    background: linear-gradient(to right, blue, red);
     border: 1px solid #ccc;
     border-radius: 5px;
 }
 
 #legend {
     display: flex;
-    flex-direction: column;
     justify-content: space-between;
-    height: 200px;
+    width: 200px;  
     font-size: 14px;
     position: relative;
 }
 
-.tick {
-    position: absolute;
-    left: 0;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-}
-
-.tick:before {
-    content: "";
-    display: block;
-    width: 5px;
-    height: 1px;
-    background: black;
-    margin-right: 3px;
-}
 
 /* The Modal (background) */
 .modal {
@@ -256,3 +360,4 @@ body {
     text-decoration: none;
     cursor: pointer;
 }
+
