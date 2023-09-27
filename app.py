@@ -46,29 +46,42 @@ def generate_data(num_agents, num_source_nodes, connection_type, num_topics):
     if connection_type == "fullyConnected":
         for i in range(num_agents):
             for j in range(i+1, num_agents):
-                links.append({"source": i, "target": j})
+                weight = random.random()
+                # weight = 1
+                links.append({"source": i, "target": j, "weight": weight})
     elif connection_type == "random":
         for i in range(num_agents):
             target = random.randint(0, num_agents-1)
             if target != i:
-                links.append({"source": i, "target": target})
+                # weight = (2 * random.random()) - 1
+                weight = 1
+                links.append({"source": i, "target": target, "weight": weight})
     elif connection_type == "smallWorld":
         # Creating a small-world network using Watts-Strogatz model
         k = 4  # Number of nearest neighbors in ring topology
         p = 0.1  # Probability of rewiring each edge
         G = nx.watts_strogatz_graph(num_agents, k, p)
         for (i, j) in G.edges():
-            links.append({"source": i, "target": j})
+            random_value = random.random()
+            if random_value < 0.7:
+                weight = random_value ** 2
+            else:
+                weight = 1 - (1 - random_value) ** 2
+            links.append({"source": i, "target": j, "weight": weight})
     elif connection_type == "erdosRenyi":
         p = 0.05  # Example probability for edge creation
         G = nx.erdos_renyi_graph(num_agents, p)
         for (i, j) in G.edges():
-            links.append({"source": i, "target": j})
+            # weight = (2 * random.random()) - 1
+            weight = 1
+            links.append({"source": i, "target": j, "weight": weight})
     elif connection_type == "scaleFree":
         m = 2  # Number of edges to attach from a new node to existing nodes
         G = nx.barabasi_albert_graph(num_agents, m)
         for (i, j) in G.edges():
-            links.append({"source": i, "target": j})
+            # weight = (2 * random.random()) - 1
+            weight = 1
+            links.append({"source": i, "target": j, "weight": weight})
 
     return nodes, links
 
@@ -259,6 +272,12 @@ def execute_plan_steps():
             
                 # Update the stance of the connected agent based on the effect
                 connected_agent[opinion_key] += trust_value * (spread_node[opinion_key] - connected_agent[opinion_key])
+                
+                if connected_agent[opinion_key] > 1:
+                    connected_agent[opinion_key] = 1
+                
+                if connected_agent[opinion_key] < -1:
+                    connected_agent[opinion_key] = -1
     
                 
     print(f"Spread Info from agent id {spread_node_id} based on the plan step: {current_plan_step}")

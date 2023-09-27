@@ -91,7 +91,19 @@ body {
     top: 10px;
     left: 10px;
     display: flex;
-    gap: 15px;  /* Adjust the gap between the legend items */
+    flex-direction: column; /* Changed to column to stack the heading and legendItemsContainer */
+}
+
+#nodeTypeLegend h4 {
+    margin-bottom: 5px; /* Spacing between the heading and color bar */
+    color: #555;        /* Match color with other text elements */
+    font-size: 14px;    /* Match font size with other text elements */
+    font-weight: bold;  /* Make the heading stand out */
+}
+
+.legendItemsContainer {
+    display: flex;
+    gap: 10px;              /* Adjust the gap between the legend items */
 }
 
 .legendItem {
@@ -162,9 +174,33 @@ body {
 }
 
 
+#agentDetails input[type="number"] {
+    /* width: 100%; */
+    padding: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+#agentDetails input[type="number"][readonly] {
+    background-color: transparent;  /* Make the background transparent */
+    border: none;                   /* Remove the border */
+    outline: none;                  /* Remove the focus outline */
+    cursor: default;                /* Use the default cursor */
+    padding-left: 0;                /* Remove padding, so it looks like plain text */
+    margin-bottom: 0;               /* Remove margin for consistent appearance */
+}
+
+
+#agentDetails input[type="number"]:hover:not([readonly]),
+#agentDetails input[type="number"]:focus {
+    background-color: #f3f3f3;     /* Light gray background on hover/focus */
+}
+
 #planDetails {
     position: absolute;
-    margin-top: 150px; /* Place it just below the agentDetails box */
+    margin-top: 160px; /* Place it just below the agentDetails box */
     right: 10px;
     border: 1px solid #ccc;
     padding: 10px;
@@ -222,6 +258,10 @@ body {
     border-bottom: 1px solid #eee; /* Separator line between steps */
 }
 
+#planStepsList .noPlan {
+    font-size: 20px;  /* Example font size, can be adjusted as desired */
+}
+
 #planStepsList li:last-child {
     border-bottom: none; /* Remove bottom border for the last step */
 }
@@ -233,6 +273,19 @@ body {
 
 .executedStep {
     color: red;
+}
+
+
+#opinionGraph {
+    margin-top: 500px;      /* Adds space above the graph */
+    border: 1px solid #ccc; /* Optional: Adds a border around the graph */
+    background-color: #f9f9f9; /* Optional: Adds a light background color */
+    width: 90%;             /* Makes it responsive, adjust as needed */
+    max-width: 500px;       /* Set a max-width to ensure it doesn't get too large */
+    display: block;         /* To allow for centering */
+    margin-left: auto;      /* Centering */
+    margin-right: auto;     /* Centering */
+    z-index: 2;
 }
 
 
@@ -257,11 +310,18 @@ body {
 
 #colorScaleContainer {
     position: absolute;
-    bottom: 20px;
-    right: 10px;
+    top: 10px;
+    left: 200px;
     display: flex;
     flex-direction: column;  /* Stack children vertically */
     align-items: flex-start;  /* Align children to the start */
+}
+
+#colorScaleContainer h4 {
+    margin-bottom: 10px; /* Spacing between the heading and color bar */
+    color: #555;        /* Match color with other text elements */
+    font-size: 14px;    /* Match font size with other text elements */
+    font-weight: bold;  /* Make the heading stand out */
 }
 
 #colorScale {

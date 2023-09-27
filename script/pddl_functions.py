@@ -65,8 +65,8 @@ def generate_pddl(nodes, links, goalNodeData):
         formatted_target = get_formatted_node_name(link['target'])
         pddl_str += f"    (connected-agent {formatted_source} {formatted_target})\n"
         pddl_str += f"    (connected-agent {formatted_target} {formatted_source})\n"
-        pddl_str += f"    (= (have-trust {formatted_source} {formatted_target}) 100)\n"
-        pddl_str += f"    (= (have-trust {formatted_target} {formatted_source}) 100)\n\n"
+        pddl_str += f"    (= (have-trust {formatted_source} {formatted_target}) {int(round(link['weight'],2)*100)})\n"
+        pddl_str += f"    (= (have-trust {formatted_target} {formatted_source}) {int(round(link['weight'],2)*100)})\n\n"
     
     pddl_str += "\n"
     
@@ -115,6 +115,9 @@ def run_planner(domain_file, problem_file):
     # Read the generated plan.txt file
     with open("script\\output.txt", "r") as file:
         content = file.read()
+        
+    if "all increasers applied yet goal not fulfilled." in content:
+        return ["No plan found"]
         
     if "found legal plan as follows" not in content:
         return 0

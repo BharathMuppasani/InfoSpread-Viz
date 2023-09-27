@@ -30,6 +30,11 @@ let goalNodeData = {
     targetOpinion: null
 };
 
+let goalNodeOpinions = [];
+
+
+let planStepLabels = [];
+
 const symbolGenerator = d3.symbol();
 
 // Set up SVG canvas dimensions
@@ -51,6 +56,7 @@ const zoomBehavior = d3.zoom()
     .on("zoom", (event) => {
         const transform = event.transform;
         svg.selectAll('g').attr("transform", transform);
+        svg.selectAll('text').attr("transform", transform);
     });
 
 svg.call(zoomBehavior);
@@ -77,6 +83,8 @@ d3.select("#network").on("click", function(event, d) {
 });
 
 // Event listener for the "Set as Goal Node" checkbox
+let goalLabel = null;  // Variable to store the reference to the "Goal" label
+
 document.getElementById("goalNodeCheckbox").addEventListener("change", function() {
     const targetOpinionDiv = document.getElementById("targetOpinionDiv");
     const generatePlanButton = document.getElementById("generatePlanButton");
@@ -85,6 +93,13 @@ document.getElementById("goalNodeCheckbox").addEventListener("change", function(
         generatePlanButton.style.display = 'block';  // Show the button
         if (selectedNode) {
             selectedNode.isGoalNode = true;
+            
+            // Append a "Goal" label near the selected node
+            goalLabel = svg.append("text")
+                .attr("x", selectedNode.x + 10)
+                .attr("y", selectedNode.y - 10)
+                .attr("class", "goalLabel")
+                .text("Goal");
         }
     } else {
         targetOpinionDiv.style.display = 'none';
@@ -92,7 +107,16 @@ document.getElementById("goalNodeCheckbox").addEventListener("change", function(
         if (selectedNode) {
             selectedNode.isGoalNode = false;
             selectedNode.targetOpinion = null;
+            
+            // Remove the "Goal" label SVG element
+            if (goalLabel) {
+                goalLabel.remove();
+                goalLabel = null;
+            }
         }
+        document.getElementById("planDetails").style.display = "none";
+        svg.selectAll(".agentIDLabel").remove();  // Remove all agent ID labels
+        svg.selectAll(".goalLabel").remove();  // Remove all "Goal" labels
     }
 });
 
@@ -132,12 +156,50 @@ document.getElementById("generatePlanButton").addEventListener("click", function
         // Clear any existing steps
         planStepsList.innerHTML = "";
 
-        // Assuming data is an array of plan steps
-        data.forEach(step => {
-            const listItem = document.createElement("li");
-            listItem.textContent = step;
-            planStepsList.appendChild(listItem);
-        });
+        // Check if the backend returns ["No plan found"] and hide the "Execute Plan" button if true
+        if (data.length === 1 && data[0] === "No plan found") {
+            document.getElementById("executePlanButton").style.display = "none";
+            const noPlanItem = document.createElement("li");
+            noPlanItem.textContent = "No plan found";
+            noPlanItem.className = "noPlan";  // Assign the special CSS class
+            planStepsList.appendChild(noPlanItem);
+            planStepLabels = [];
+        } else {
+            document.getElementById("executePlanButton").style.display = "block";
+            // Assuming data is an array of plan steps
+            planStepLabels = [];
+            data.forEach(step => {
+                const listItem = document.createElement("li");
+                listItem.textContent = step;
+                planStepsList.appendChild(listItem);
+
+                const agentString = step.split(' ')[1];
+
+                // Extract the integer portion from the agent string to get the ID
+                const agentID = parseInt(agentString.match(/\d+/)[0]);
+
+                const agentNode = nodes.find(d => d.id === agentID);
+
+                // Use D3.js to directly append a text label for the agent's ID, if the node exists
+                if (agentNode) {
+                    // Check if the node with the same ID already exists in planStepLabels
+                    const existingNode = planStepLabels.find(n => n.id === agentNode.id);
+                
+                    // If not, push the agentNode and append the text label
+                    if (!existingNode) {
+                        planStepLabels.push(agentNode);
+                        svg.append("text")
+                            .attr("x", agentNode.x + 10)
+                            .attr("y", agentNode.y + 10)
+                            .attr("class", "agentIDLabel")
+                            .attr("data-id", agentID)  // Store the node's ID as a data attribute
+                            .text(agentID);
+                    }
+                    console.log(planStepLabels)
+                }
+                
+            });
+        }
 
         // Display the plan details div
         document.getElementById("planDetails").style.display = "block";
@@ -148,6 +210,9 @@ document.getElementById("generatePlanButton").addEventListener("click", function
 });
 
 
+var linkStrokeWidthScale = d3.scaleLinear()
+    .domain([-1, 1])
+    .range([0.5, 2]);
 
 // Get the modal
 var modal = document.getElementById("matrixModal");
@@ -281,6 +346,8 @@ function updateVisualization(numAgents, numSourceNodes) {
         targetOpinion: null
     };
 
+    goalLabel = null;
+
     const goalNodeCheckbox = document.getElementById("goalNodeCheckbox");
     const targetOpinionInput = document.getElementById("targetOpinion");
 
@@ -288,6 +355,7 @@ function updateVisualization(numAgents, numSourceNodes) {
     targetOpinionInput.value = "";
     document.getElementById("targetOpinionDiv").style.display = 'none';
     document.getElementById("planDetails").style.display = 'none';
+    planStepLabels = [];
 
     while (topicSelect.firstChild) {
         topicSelect.removeChild(topicSelect.firstChild);  // Clear previous options
@@ -334,6 +402,7 @@ function updateVisualization(numAgents, numSourceNodes) {
             .data(links)
             .enter().append("line")
             .attr("stroke", "#999")
+            .attr("stroke-width", d => linkStrokeWidthScale(d.weight))
             .attr("stroke-opacity", 0.9);
 
         // Re-draw nodes and attach click and drag events
@@ -407,6 +476,22 @@ function updateVisualization(numAgents, numSourceNodes) {
         
             node
                 .attr("transform", d => `translate(${d.x}, ${d.y})`);
+            
+            if (goalLabel && selectedNode.isGoalNode) {
+                goalLabel.attr("x", selectedNode.x + 10)
+                            .attr("y", selectedNode.y - 10);
+            }
+
+            if (planStepLabels.length !== 0) {
+                planStepLabels.forEach(node => {
+                    if (node) {
+                        svg.select(`text.agentIDLabel[data-id='${node.id}']`)
+                            .attr("x", node.x + 10)
+                            .attr("y", node.y + 10);
+                    }
+                });
+            }
+
         });
         
 
@@ -420,6 +505,18 @@ function updateVisualization(numAgents, numSourceNodes) {
     });
 }
 
+// Attach an event listener to the nodeOpinionInput field
+document.getElementById("nodeOpinionInput").addEventListener("change", function() {
+    if (selectedNode && selectedNode.type === "Source") {
+        // Update the underlying node data
+        const selectedTopicIndex = document.getElementById("visualizationTopicSelector").value;
+        const opinionKey = `opinion_${selectedTopicIndex}`;
+        selectedNode[opinionKey] = parseFloat(this.value);
+        refreshVisualization();
+    }
+});
+
+
 function updateAgentDetails(d) {
     // Update the agent details div
     document.getElementById("nodeId").textContent = d.id;
@@ -430,8 +527,11 @@ function updateAgentDetails(d) {
     const topicLabel = `Topic-${parseInt(selectedTopicIndex) + 1} Opinion`;
 
     document.getElementById("nodeOpinionLabel").textContent = topicLabel;
-    document.getElementById("nodeOpinion").textContent = d[opinionKey].toFixed(2);
-    
+    const nodeOpinionInput = document.getElementById("nodeOpinionInput");
+    nodeOpinionInput.value = d[opinionKey].toFixed(2);
+    nodeOpinionInput.readOnly = (d.type !== "Source");  // Make it editable only for "Source" nodes
+
+        
     const goalNodeCheckbox = document.getElementById("goalNodeCheckbox");
     const targetOpinionInput = document.getElementById("targetOpinion");
     const generatePlanButton = document.getElementById("generatePlanButton");
@@ -522,12 +622,23 @@ document.getElementById("executePlanButton").addEventListener("click", async fun
         // Highlight the current step
         planStepsElements[i].classList.add('currentStep');
 
+        const agentString = step.split(' ')[1];
+
+        // Extract the integer portion from the agent string to get the ID
+        const agentID = parseInt(agentString.match(/\d+/)[0]);
+
         let topicMatch = step.match(/TOPIC(\d+)/);
         let topicNumber = topicMatch ? parseInt(topicMatch[1]) : null;
 
         if(topicNumber === null) {
             console.error("Error extracting topic number from step:", step);
             continue;  // Skip this iteration
+        }
+
+        if (agentID) {
+            d3.select(`text.agentIDLabel[data-id='${agentID}']`)
+              .style("font-weight", "bold")
+              .style("fill", "red");  // Use the desired accent color here
         }
 
         await fetch("http://localhost:5002/execute_plan", {
@@ -550,6 +661,13 @@ document.getElementById("executePlanButton").addEventListener("click", async fun
                 nodes[j][opinionKey] = data.nodes[j][opinionKey];
             }
 
+            const goalNodeTemp = nodes.find(node => node.id === goalNodeData.nodeId);
+            if (goalNodeTemp) {
+                goalNodeOpinions.push(goalNodeTemp[opinionKey]);
+            }
+
+            drawOpinionGraph(goalNodeOpinions);
+
             refreshVisualization();
             if (selectedNode) {
                 let updatedNodeData = selectedNode;
@@ -567,6 +685,12 @@ document.getElementById("executePlanButton").addEventListener("click", async fun
         // Mark the step as executed and remove the 'current' highlighting
         planStepsElements[i].classList.remove('currentStep');
         planStepsElements[i].classList.add('executedStep');
+
+        if (agentID) {
+            d3.select(`text.agentIDLabel[data-id='${agentID}']`)
+              .style("font-weight", "normal")
+              .style("fill", "black");  // Use the desired accent color here
+        }
     }
 });
 
@@ -588,6 +712,37 @@ function refreshVisualization() {
     
     // If needed, update the links or any other visualization elements as well
     // ...
+}
+
+function drawOpinionGraph(data) {
+    const svg = d3.select("#opinionGraph");
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+
+    // Define scales
+    const xScale = d3.scaleLinear()
+                     .domain([0, data.length - 1])
+                     .range([0, width]);
+
+    const yScale = d3.scaleLinear()
+                     .domain([d3.min(data), d3.max(data)])
+                     .range([height, 0]);
+
+    // Remove previous path if it exists
+    svg.select(".opinionPath").remove();
+
+    // Draw the path
+    const line = d3.line()
+                   .x((d, i) => xScale(i))
+                   .y(d => yScale(d));
+
+    svg.append("path")
+       .datum(data)
+       .attr("class", "opinionPath")
+       .attr("fill", "none")
+       .attr("stroke", "blue")
+       .attr("stroke-width", 1.5)
+       .attr("d", line);
 }
 
 

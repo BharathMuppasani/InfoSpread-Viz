@@ -40,6 +40,22 @@
             )
   )
 
+  ; (:action update-info
+  ;     :parameters (?a - agent ?t - topic)
+  ;     :precondition (and )
+  ;     :effect (and 
+  ;               (forall (?a2 - agent) 
+  ;                 (when (connected-agent ?a ?a2) 
+  ;                     (and 
+  ;                         (increase (have-stance ?a ?t) (/ (* (have-trust ?a ?a2) (have-stance ?a2 ?t)) 100) ) 
+                          
+  ;                     ) 
+  ;                 )
+  ;               )
+  ;     )
+  ; )
+  
+
   ; Other actions and predicates can be defined here as per your requirements
 
 )
